@@ -1,5 +1,5 @@
 ```Smalltalk
 Metacello new
      baseline: 'ExercicesInria';
-     repository: 'github://ClotildeToullec/ToTo';
+     repository: 'github://ClotildeToullec/ExercicesInria';
      load.
