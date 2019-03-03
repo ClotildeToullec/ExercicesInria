@@ -11,7 +11,7 @@ Class {
 		'previous',
 		'next'
 	],
-	#category : #EIList
+	#category : #EIChain
 }
 
 { #category : #'instance creation' }

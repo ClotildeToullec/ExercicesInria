@@ -6,7 +6,7 @@ Class {
 		'longList',
 		'longListLast'
 	],
-	#category : #EIList
+	#category : #EIChain
 }
 
 { #category : #running }
