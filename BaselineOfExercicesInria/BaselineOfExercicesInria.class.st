@@ -9,9 +9,8 @@ BaselineOfExercicesInria >> baseline: spec [
 	<baseline>
 	spec
 		for: #common
-		do: [
-			"Packages"
+		do: [ "Packages"
 			spec
-				package: 'EIChain']
-
+				package: 'EIChain';
+				package: 'EIDocumentation' ]
 ]
