@@ -16,18 +16,64 @@ EIPackageDocGenerator class >> newForPackage: packageName [
 		initialize
 ]
 
-{ #category : #initialization }
-EIPackageDocGenerator >> checkPackageExistence [
-	(SystemNavigation default allClassesInPackageNamed: package)
-		ifEmpty: [ self error: 'This package is empty or does not exist.' ]
-]
-
 { #category : #'class pages' }
-EIPackageDocGenerator >> commentOfClass: aClass In: html [
+EIPackageDocGenerator >> buildCommentOfClass: aClass In: html [
 	aClass hasComment
 		ifTrue: [ html
 				tag: #h3 with: 'Class comment :';
 				tag: #p with: aClass comment ]
+]
+
+{ #category : #'class pages' }
+EIPackageDocGenerator >> buildMethodsForProtocol: protocol inClassSide: aClassSide in: html [
+	html
+		tag: #p
+		do: [ html
+				tag: #ul
+				do: [ (aClassSide methods
+						select: [ :method | method protocol == protocol ])
+						do: [ :method | 
+							html tag: #li with: method selector asString.
+							method numArgs > 0
+								ifTrue: [ html
+										tag: #details
+										do: [ html
+												tag: #summary with: 'Arguments';
+												tag: #ul
+													do: [ method argumentNames do: [ :arg | html tag: #li with: arg ] ] ] ].
+							method comment
+								ifNotNil: [ html
+										tag: #details
+										do: [ html
+												tag: #summary with: 'Comment';
+												tag: #p with: method comment ] ] ] ] ]
+]
+
+{ #category : #'class pages' }
+EIPackageDocGenerator >> buildProtocolsFor: aClassSide In: html [
+	aClassSide protocols
+		do: [ :protocol | 
+			html
+				tag: #h4 with: protocol asString;
+				tag: #ul
+					do: [ self
+						buildMethodsForProtocol: protocol
+						inClassSide: aClassSide
+						in: html ] ]
+]
+
+{ #category : #'class pages' }
+EIPackageDocGenerator >> buildSuperclassOf: aClass In: html [
+	aClass superclass ifNil: [ ^ self ].
+	aClass superclass category == package
+		ifTrue:
+			[ html tag: #h4 with: 'Superclass : ' , aClass superclass printString ]
+]
+
+{ #category : #initialization }
+EIPackageDocGenerator >> checkPackageExistence [
+	(SystemNavigation default allClassesInPackageNamed: package)
+		ifEmpty: [ self error: 'This package is empty or does not exist.' ]
 ]
 
 { #category : #homepage }
@@ -51,52 +97,6 @@ EIPackageDocGenerator >> generateClassListIn: html [
 										with: class printString ] ] ] ]
 ]
 
-{ #category : #'class pages' }
-EIPackageDocGenerator >> generateClassMethodsListFor: aClass In: html [
-	html
-		tag: #ul
-		do: [ aClass classSide methods
-				do: [ :method | html tag: #li with: method selector ] ]
-]
-
-{ #category : #'class pages' }
-EIPackageDocGenerator >> generateClassMethodsListForProtocol: protocol inClass: aClass in: html [
-	html
-		tag: #p
-		do: [ html
-				tag: #ul
-				do: [ (aClass classSide methods
-						select: [ :method | method protocol == protocol ])
-						do: [ :method | 
-							html tag: #li with: method selector asString.
-							method numArgs > 0
-								ifTrue: [ html
-										tag: #details
-										do: [ html
-												tag: #summary with: 'Arguments';
-												tag: #ul
-													do: [ method argumentNames do: [ :arg | html tag: #li with: arg ] ] ] ].
-							method comment
-								ifNotNil: [ html
-										tag: #details
-										do: [ html
-												tag: #summary with: 'Comment';
-												tag: #p with: method comment ] ] ] ] ]
-]
-
-{ #category : #'class pages' }
-EIPackageDocGenerator >> generateClassProtocolsListFor: aClass In: html [
-	aClass classSide protocols
-		do: [ :protocol | 
-			html
-				tag: #h4 with: protocol asString;
-				tag: #ul
-					do: [ self
-						generateClassMethodsListForProtocol: protocol
-						inClass: aClass
-						in: html ] ]
-]
-
 { #category : #homepage }
 EIPackageDocGenerator >> generateHomePage [
 	| homepageContents |
@@ -113,43 +113,6 @@ EIPackageDocGenerator >> generateHomePage [
 ]
 
 { #category : #'class pages' }
-EIPackageDocGenerator >> generateInstanceProtocolsListFor: aClass In: html [
-	aClass protocols
-		do: [ :protocol | 
-			html
-				tag: #h4 with: protocol asString;
-				tag: #ul
-					do: [ self
-						generateMethodsListForProtocol: protocol
-						inClass: aClass
-						in: html ] ]
-]
-
-{ #category : #'class pages' }
-EIPackageDocGenerator >> generateMethodsListForProtocol: protocol inClass: aClass in: html [
-	html
-		tag: #p
-		do: [ html
-				tag: #ul
-				do: [ (aClass methods select: [ :method | method protocol == protocol ])
-						do: [ :method | 
-							html tag: #li with: method selector asString.
-							method numArgs > 0
-								ifTrue: [ html
-										tag: #details
-										do: [ html
-												tag: #summary with: 'Arguments';
-												tag: #ul
-													do: [ method argumentNames do: [ :arg | html tag: #li with: arg ] ] ] ].
-							method comment
-								ifNotNil: [ html
-										tag: #details
-										do: [ html
-												tag: #summary with: 'Comment';
-												tag: #p with: method comment ] ] ] ] ]
-]
-
-{ #category : #'class pages' }
 EIPackageDocGenerator >> generatePageForClass: aClass [
 	| classPageContents classFile |
 	classPageContents := ZnHtmlOutputStream
@@ -159,15 +122,15 @@ EIPackageDocGenerator >> generatePageForClass: aClass [
 				do: [ self
 						linkToDocumentationHomePageIn: html;
 						linkToPackageHomepageIn: html;
-						superClassOf: aClass In: html;
-						commentOfClass: aClass In: html.
+						buildSuperclassOf: aClass In: html;
+						buildCommentOfClass: aClass In: html.
 					html
 						tag: #h3 with: 'Class methods :';
 						tag: #p
-							do: [ self generateClassProtocolsListFor: aClass In: html ];
+							do: [ self buildProtocolsFor: aClass classSide In: html ];
 						tag: #h3 with: 'Instance methods :';
 						tag: #p
-							do: [ self generateInstanceProtocolsListFor: aClass In: html ] ] ].
+							do: [ self buildProtocolsFor: aClass In: html ] ] ].
 	classFile := aClass printString , '.html'.
 	directory / classFile
 		writeStreamDo: [ :stream | stream nextPutAll: classPageContents ]
@@ -216,11 +179,4 @@ EIPackageDocGenerator >> package [
 { #category : #accessing }
 EIPackageDocGenerator >> package: aString [
 	package := aString
-]
-
-{ #category : #'class pages' }
-EIPackageDocGenerator >> superClassOf: aClass In: html [
-	aClass superclass category == package
-		ifTrue:
-			[ html tag: #h4 with: 'Superclass : ' , aClass superclass printString ]
 ]

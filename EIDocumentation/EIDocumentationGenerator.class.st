@@ -13,8 +13,13 @@ Class {
 
 { #category : #reset }
 EIDocumentationGenerator class >> deleteAllDocumentation [
-	DocumentedPackages := OrderedCollection new.
-	(FileSystem disk workingDirectory / 'Documentation') deleteAll
+	<script>
+	| documentationFile |
+	documentationFile := FileSystem disk workingDirectory
+		/ 'Documentation'.
+	documentationFile isDirectory
+		ifTrue: [ documentationFile deleteAll ].
+	DocumentedPackages := OrderedCollection new
 ]
 
 { #category : #generation }
@@ -22,6 +27,14 @@ EIDocumentationGenerator class >> documentPackage: aPackageName [
 	DocumentedPackages := DocumentedPackages
 		ifNil: [ OrderedCollection new ].
 	^ super new documentPackage: aPackageName
+]
+
+{ #category : #example }
+EIDocumentationGenerator class >> example [
+	<script>
+	self
+		documentPackage: 'Colors';
+		documentPackage: 'Collections'
 ]
 
 { #category : #accessing }
@@ -32,6 +45,27 @@ EIDocumentationGenerator class >> homepage [
 { #category : #'instance creation' }
 EIDocumentationGenerator class >> new [
 	self error: 'DocumentGenerators are created with documentPackage: '
+]
+
+{ #category : #generation }
+EIDocumentationGenerator >> buildDocumentedPackageListIn: html [
+	^ DocumentedPackages
+		ifNotEmpty: [ DocumentedPackages
+				do: [ :pck | 
+					| pckPath |
+					pckPath := WriteStream with: pck.
+					pckPath
+						<< '/Package_';
+						<< pck;
+						<< '.html'.
+					html
+						tag: #li
+						do: [ html
+								tag: #a
+								attributes:
+									{'href'.
+									pckPath contents}
+								with: pck ] ] ]
 ]
 
 { #category : #generation }
@@ -52,25 +86,8 @@ EIDocumentationGenerator >> generateDocumentationHomepage [
 				do: [ html
 						tag: #h3 with: 'Documented Packages :';
 						tag: #p
-							do: [ html
-								tag: #ul
-								do: [ DocumentedPackages
-										ifNotEmpty: [ DocumentedPackages
-												do: [ :pck | 
-													| pckPath |
-													pckPath := WriteStream with: pck.
-													pckPath
-														<< '/Package_';
-														<< pck;
-														<< '.html'.
-													html
-														tag: #li
-														do: [ html
-																tag: #a
-																attributes:
-																	{'href'.
-																	pckPath contents}
-																with: pck ] ] ] ] ] ] ].
+							do: [ html tag: #ul do:
+								[ self buildDocumentedPackageListIn: html ] ] ] ].
 	directory / 'homepage.html'
 		writeStreamDo: [ :stream | stream nextPutAll: homepageContents ]
 ]
